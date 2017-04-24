@@ -86,7 +86,7 @@ if __name__ == "__main__":
         words = raw_input("Please enter one or three space separated words: ").split()
         for word in words:
             if not vocab.InVocab(word):
-                print "%s is not in this model."
+                print "%s is not in this model." % word
                 words = []
         if len(words) == 3:
             word1, word1_prime, word2 = words

@@ -1,6 +1,11 @@
+# coding: utf8
+
 import sys
-from embeddings import Vocab, WordEmbedding
+
 import numpy as np
+
+from embeddings import Vocab, WordEmbedding
+
 
 def load_example_sets(path):
     # Loads list of pairs per line.
@@ -10,8 +15,9 @@ def load_labels(path):
     # Loads a label for each line (-1 indicates the pairs do not form a relation).
     return [int(label) for label in open(path)]
 
-def label_all_examples_as_not_a_relation(examples):
-    return [-1 for example in examples]
+def cosine(x, y):
+    # Cosine of angle between vectors x and y
+    return x.dot(y) / np.linalg.norm(x) / np.linalg.norm(y)
 
 if __name__ == '__main__':
     if len(sys.argv) != 6:
@@ -25,21 +31,38 @@ if __name__ == '__main__':
     # Loads training data and labels.
     training_examples = load_example_sets(sys.argv[3])
     training_labels = load_labels(sys.argv[4])
+
     assert len(training_examples) == len(training_labels), "Expected one label for each line in training data."
 
     # Load test examples and labels each set of pairs as 'not a relation' (-1)
     # This is not a good idea... You can definitely do better!
     test_examples = load_example_sets(sys.argv[5])
-    for null_label in label_all_examples_as_not_a_relation(test_examples):
-        print '%d' % null_label
 
-    # TODO
-    # 1. Try using the word embedding to discriminate between sets of pairs
-    # that belong to a common relation and ones that don't (labelled -1).
-    # E.g. training_example = [ (dog, dogs), (cat, cats), ... ], training_label = 3
-    #      training_example = [ (dog, fishing), (cats, in), ...], training_label = -1
-    #
-    # 2. Once you have a model that can discriminate related pairs from unrelated ones,
-    # try to further classify those that form a relation into a specific class. 
-    # Note: all relations (labels) are observed at least one in the training data.
 
+    # Store displacement between embeddings for each label in train
+    training_displacements = {lbl: [] for lbl in training_labels}
+    for i, lbl in enumerate(training_labels):
+        for x,y in training_examples[i]:
+            displ = embedding.Projection(y.decode('utf-8')) - embedding.Projection(x.decode('utf-8'))
+            training_displacements[lbl].append(displ)
+
+    with open('result.txt', 'w') as f:
+        threshold = 0.2
+        for j, row in enumerate(test_examples):
+            labels = training_displacements.keys()
+            mean_cosine_distances = []
+            for lbl in labels:
+                distances = []
+                for x,y in row:
+                    cur_displ = embedding.Projection(y.decode('utf-8')) - embedding.Projection(x.decode('utf-8'))
+                    if  np.abs(cur_displ).max() == 0:
+                        cur_displ += 1e-8
+                    for displ in training_displacements[lbl]:
+                        distances.append(cosine(cur_displ, displ))
+                if distances:
+                    mean_cosine_distances.append(np.mean(distances))
+                else:
+                    mean_cosine_distances.append(-1)
+            ind = np.argsort(mean_cosine_distances)[::-1]
+            predicted_label = labels[ind[0]] if mean_cosine_distances[ind[0]] >= threshold else -1
+            f.write('%d\n' % predicted_label)
