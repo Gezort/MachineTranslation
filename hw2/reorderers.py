@@ -1,7 +1,7 @@
 import sys
 
 from tree import Tree
-
+from evaluate_reordering import score_all_reorderings
 
 class Reorderer:
     def reorder(self, root):
@@ -43,26 +43,30 @@ class ReverseReorderer(RecursiveReorderer):
             [(child.index, child) for child in head.children] + [(head.index, head)])
         return [node for _, node in sorted(all_nodes, reverse=True)]
 
+
 class HeadFinalReorderer(RecursiveReorderer):
     def reorder_head_and_children(self, head):
         all_nodes = [(child.index, child) for child in head.children]
         return [node for _, node in sorted(all_nodes)] + [head]
 
+
 class SOVReorderer(RecursiveReorderer):
     def reorder_head_and_children(self, head):
         all_nodes = head.children + [head]
-        if head.tag[:2] == 'VB':
-            normal_labels = {'advcl': -1, 'nsubj': 0, 'prep': 0, 'dobj': 1}
-            reverse_labels = ['prt', 'aux', 'auxpass', 'neg']
-        elif head.tag[:2] == 'JJ':
-            normal_labels = {'advcl': -1}
-            reverse_labels = ['aux', 'auxpass', 'neg', 'cop']
-        elif head.tag[:2] == 'NN':
-            normal_labels = {'prep': -2, 'rcmod': -1}
-            reverse_labels = []
+        if head.tag in ['VB', 'NNS', 'VBD', 'DT', 'VBZ', 'JJ', 'POS', 'VBN', 'FW', 'VBG']:
+            normal_labels = {'advcl': 0, 'nsubj': 0, 'prep': 0, 'xcomp': 0, 'attr': 0, 'nn': 0,
+                             'advmod': 0, 'nsubjpass': 0, 'ccomp': 0, 'prt': 0, 'rel': 0, 'p': 0,
+                             'csubj': 0, 'appos': 0}
+            reverse_labels = ['neg', 'mark', 'auxpass', 'aux', 'complm', 'acomp',]
+        elif head.tag in ['NNP']:
+            normal_labels = {'nn': 0, 'prep': 0, 'appos': 0}
+            reverse_labels = ['cc', 'rcmod', 'partmod', 'tmod', 'num']
+        elif head.tag in ['NN']:
+            normal_labels = {'prep': 0, 'rcmod': -1}
+            reverse_labels = ['infmod', 'num', 'neg']
         else:
             normal_labels = {'pobj': -1}
-            reverse_labels = []
+            reverse_labels = ['dobj', 'dep', 'complm', 'mark', 'neg', 'amod', 'expl', 'num']
         normal = []
         untouched = []
         reverse = []
@@ -86,6 +90,7 @@ if __name__ == "__main__":
     if not len(sys.argv) == 3:
         print "python reorderers.py ReordererClass parses"
         sys.exit(0)
+
     # Instantiates the reorderer of this class name.
     reorderer = eval(sys.argv[1])()
 

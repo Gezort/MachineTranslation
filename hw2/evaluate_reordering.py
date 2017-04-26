@@ -30,8 +30,9 @@ def score_all_reorderings(references, candidates):
         reference, candidate = normalize(references[i], candidates[i])
         assert reference and candidate, "Normalization failed!"
         scores[i] = normalized_kendalls_tau(reference, candidate)
-    print "Average normalized kendalls tau was %1.6f on %d sentences." % (
-        float(sum(scores.values())) / len(scores.keys()), len(scores.keys()))
+    res = float(sum(scores.values())) / len(scores.keys()), len(scores.keys())
+    print "Average normalized kendalls tau was %1.3f on %d sentences." % res
+    return res[0]
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
