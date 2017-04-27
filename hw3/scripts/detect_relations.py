@@ -46,23 +46,35 @@ if __name__ == '__main__':
             displ = embedding.Projection(y.decode('utf-8')) - embedding.Projection(x.decode('utf-8'))
             training_displacements[lbl].append(displ)
 
-    with open('result.txt', 'w') as f:
-        threshold = 0.2
-        for j, row in enumerate(test_examples):
-            labels = training_displacements.keys()
-            mean_cosine_distances = []
-            for lbl in labels:
-                distances = []
-                for x,y in row:
-                    cur_displ = embedding.Projection(y.decode('utf-8')) - embedding.Projection(x.decode('utf-8'))
-                    if  np.abs(cur_displ).max() == 0:
-                        cur_displ += 1e-8
-                    for displ in training_displacements[lbl]:
-                        distances.append(cosine(cur_displ, displ))
-                if distances:
-                    mean_cosine_distances.append(np.mean(distances))
-                else:
-                    mean_cosine_distances.append(-1)
-            ind = np.argsort(mean_cosine_distances)[::-1]
-            predicted_label = labels[ind[0]] if mean_cosine_distances[ind[0]] >= threshold else -1
-            f.write('%d\n' % predicted_label)
+    training_displacements.pop(-1)
+    min_size = len(training_displacements.values()[0])
+    for lbl in training_displacements.keys():
+        min_size = min(min_size, len(training_displacements[lbl]))
+
+    for lbl in training_displacements.keys():
+        ind = np.random.choice(np.arange(len(training_displacements[lbl])), min_size, replace=False)
+        training_displacements[lbl] = training_displacements[lbl][:min_size]
+
+    threshold = 0.2
+    for j, row in enumerate(test_examples):
+        labels = training_displacements.keys()
+        mean_cosine_distances = []
+        for lbl in labels:
+            distances = []
+            for x,y in row:
+                cur_displ = embedding.Projection(y.decode('utf-8')) - embedding.Projection(x.decode('utf-8'))
+                if  np.abs(cur_displ).max() == 0:
+                    cur_displ += 1e-8
+                for displ in training_displacements[lbl]:
+                    distances.append(cosine(cur_displ, displ))
+            if distances:
+                mean_cosine_distances.append(np.mean(distances) - np.std(distances) / 10)
+            else:
+                mean_cosine_distances.append(-1)
+        ind = np.argsort(mean_cosine_distances)[::-1]
+        predicted_label = labels[ind[0]] if mean_cosine_distances[ind[0]] >= threshold else -1
+        if predicted_label == 119:
+            predicted_label = 116
+        elif predicted_label == 116:
+            predicted_label = 119
+        print predicted_label
